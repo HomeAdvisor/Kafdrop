@@ -18,6 +18,8 @@
 
 package com.homeadvisor.kafdrop.model;
 
+import kafka.cluster.Broker;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -113,6 +115,64 @@ public class TopicVO implements Comparable<TopicVO>
          .filter(TopicPartitionVO::isLeaderPreferred)
          .count();
       return ((double) preferredLeaderCount) / ((double)partitions.size());
+   }
+
+   public Map<String, List<TopicPartitionVO.PartitionReplica>> getBrokerLeaders()
+   {
+      return partitions.values().stream()
+              .map(TopicPartitionVO::getLeader)
+              .filter(Objects::nonNull)
+              .collect(Collectors.groupingBy(leader -> leader.getId().toString(), TreeMap::new, Collectors.toList()));
+   }
+
+   public Map<String, BrokerReplicas> getBrokerReplicas()
+   {
+      Map<String, BrokerReplicas> brokerReplicasMap = new TreeMap<>();
+      partitions.values().stream()
+         .flatMap(tp -> tp.getReplicas().stream())
+         .forEach(r -> brokerReplicasMap.computeIfAbsent(r.getId().toString(),
+                                                         BrokerReplicas::new)
+            .addReplica(r));
+      return brokerReplicasMap;
+   }
+
+   public static class BrokerReplicas
+   {
+      /** The ID of the broker owning the replicas */
+      private final String brokerId;
+      /** List of leader replicas on this broker */
+      private final List<TopicPartitionVO.PartitionReplica> leaders = new ArrayList<>();
+      /** List of non-leader replicas on this broker */
+      private final List<TopicPartitionVO.PartitionReplica> replicas = new ArrayList<>();
+
+      public BrokerReplicas(String brokerId) {
+         this.brokerId = brokerId;
+      }
+
+      public void addReplica(TopicPartitionVO.PartitionReplica replica)
+      {
+         if (replica.isLeader()) {
+            leaders.add(replica);
+         }
+         else {
+            replicas.add(replica);
+         }
+      }
+
+      public String getBrokerId()
+      {
+         return brokerId;
+      }
+
+      public List<TopicPartitionVO.PartitionReplica> getLeaders()
+      {
+         return leaders;
+      }
+
+      public List<TopicPartitionVO.PartitionReplica> getReplicas()
+      {
+         return replicas;
+      }
    }
 
    public void addPartition(TopicPartitionVO partition)

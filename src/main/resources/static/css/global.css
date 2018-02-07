@@ -55,3 +55,7 @@
     padding-left: 3px;
     vertical-align: bottom;
 }
+
+.table .list-unstyled {
+    margin-bottom: 0;
+}

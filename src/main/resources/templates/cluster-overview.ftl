@@ -104,7 +104,7 @@
 
         <div id="topics">
             <h3>Topics</h3>
-            <table class="table table-bordered">
+            <table class="table table-bordered table-condensed">
                 <thead>
                 <tr>
                     <th>
@@ -116,25 +116,30 @@
                         </span>
                     </th>
                     <th>
-                        Partitions
+                        Total<br/>Partitions
                         <a title="Number of partitions in the topic"
                            data-toggle="tooltip" data-placement="top" href="#"
                         ><i class="fa fa-question-circle"></i></a>
                     </th>
                     <th>
-                        % Preferred
+                        Replica<br/>Owners
+                        <a title="List of brokers owning this topic's data. Format is <brokerId>: <leader count>/<replica count>"
+                           data-toggle="tooltip" data-placement="top" href="#"
+                        ><i class="fa fa-question-circle"></i></a>
+                    </th>
+                    <th>
+                        Preferred<br/>Leader %
                         <a title="Percent of partitions where the preferred broker has been assigned leadership"
                            data-toggle="tooltip" data-placement="top" href="#"
                         ><i class="fa fa-question-circle"></i></a>
                     </th>
                     <th>
-                        # Under Replicated
+                        # Under<br/>Replicated
                         <a title="Number of partition replicas that are not in sync with the primary partition"
                            data-toggle="tooltip" data-placement="top" href="#"
                         ><i class="fa fa-question-circle"></i></a>
                     </th>
-                    <th>Custom Config?</th>
-                    <#--<th>Consumers</th>-->
+                    <th>Custom<br/>Config?</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -147,10 +152,26 @@
                 <tr class="dataRow">
                     <td><a href="/topic/${t.name}">${t.name}</a></td>
                     <td>${t.partitions?size}</td>
+                    <td>
+                        <ul class="list-inline">
+                            <#assign replicas=t.brokerReplicas>
+                            <#list replicas?values as brokerReplicas>
+                                <li>${brokerReplicas.brokerId}: <b>${brokerReplicas.leaders?size}</b>/${brokerReplicas.replicas?size}</li>
+                            </#list>
+                        </ul>
+                    </td>
                     <td <#if t.preferredReplicaPercent lt 1.0>class="warning"</#if>>${t.preferredReplicaPercent?string.percent}</td>
                     <td <#if t.underReplicatedPartitions?size gt 0>class="warning"</#if>>${t.underReplicatedPartitions?size}</td>
-                    <td><@template.yn t.config?size gt 0/></td>
-                    <#--<td>${t.consumers![]?size}</td>-->
+                    <td>
+                        <#assign customConfig=t.config?size gt 0/>
+                        <@template.yn customConfig/>
+                        <#if customConfig>
+                            <#assign configDetails><#list t.config?keys as c>${c}: ${t.config[c]}<#if c_has_next>, </#if></#list></#assign>
+                            <a title="${configDetails}"
+                               data-toggle="tooltip" data-placement="top" href="#"
+                            ><i class="fa fa-info-circle"></i></a>
+                        </#if>
+                    </td>
                 </tr>
                 </#list>
                 </tbody>
