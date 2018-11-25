@@ -62,8 +62,13 @@
       </dependency>
       <dependency>
          <groupId>org.apache.kafka</groupId>
-	 <artifactId>kafka_${kafka.scala.version}</artifactId>
-	 <version>${kafka.version}</version>
+         <artifactId>kafka_${kafka.scala.version}</artifactId>
+         <version>${kafka.version}</version>
+      </dependency>
+      <dependency>
+         <groupId>org.apache.kafka</groupId>
+         <artifactId>kafka-clients</artifactId>
+         <version>${kafka.version}</version>
       </dependency>
       <dependency>
          <groupId>org.freemarker</groupId>
@@ -152,13 +157,6 @@
          <groupId>org.codehaus.groovy.modules.http-builder</groupId>
          <artifactId>http-builder</artifactId>
          <version>0.7.1</version>
-         <scope>test</scope>
-      </dependency>
-      <!-- Right now only needed by integration tests -->
-      <dependency>
-         <groupId>org.apache.kafka</groupId>
-         <artifactId>kafka-clients</artifactId>
-	 <version>${kafka.version}</version>
          <scope>test</scope>
       </dependency>
    </dependencies>
