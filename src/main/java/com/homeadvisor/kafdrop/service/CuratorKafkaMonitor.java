@@ -24,13 +24,14 @@ import com.google.common.collect.ImmutableMap;
 import com.homeadvisor.kafdrop.model.*;
 import com.homeadvisor.kafdrop.util.BrokerChannel;
 import com.homeadvisor.kafdrop.util.Version;
-import kafka.api.ConsumerMetadataRequest;
+import kafka.api.GroupCoordinatorRequest;
 import kafka.api.PartitionOffsetRequestInfo;
-import kafka.cluster.Broker;
+import kafka.cluster.BrokerEndPoint;
 import kafka.common.ErrorMapping;
 import kafka.common.TopicAndPartition;
 import kafka.javaapi.*;
 import kafka.network.BlockingChannel;
+import kafka.server.ConfigType;
 import kafka.utils.ZKGroupDirs;
 import kafka.utils.ZKGroupTopicDirs;
 import kafka.utils.ZkUtils;
@@ -128,7 +129,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
       });
       brokerPathCache.start(StartMode.POST_INITIALIZED_EVENT);
 
-      topicConfigPathCache = new PathChildrenCache(curatorFramework, ZkUtils.TopicConfigPath(), true);
+      topicConfigPathCache = new PathChildrenCache(curatorFramework, ZkUtils.getEntityConfigPath(ConfigType.Topic()), true);
       topicConfigPathCache.getListenable().addListener((f, e) -> {
          if (e.getType() == PathChildrenCacheEvent.Type.INITIALIZED)
          {
@@ -392,7 +393,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
             objectMapper.reader(TopicRegistrationVO.class).readValue(input.getData());
 
          topic.setConfig(
-            Optional.ofNullable(topicConfigPathCache.getCurrentData(ZkUtils.TopicConfigPath() + "/" + topic.getName()))
+            Optional.ofNullable(topicConfigPathCache.getCurrentData(ZkUtils.getEntityConfigPath(ConfigType.Topic()) + "/" + topic.getName()))
                .map(this::readTopicConfig)
                .orElse(Collections.emptyMap()));
 
@@ -437,7 +438,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
 
       channel.send(request);
       final kafka.api.TopicMetadataResponse underlyingResponse =
-         kafka.api.TopicMetadataResponse.readFrom(channel.receive().buffer());
+         kafka.api.TopicMetadataResponse.readFrom(channel.receive().payload());
 
       LOG.debug("Received topic metadata response: {}", underlyingResponse);
 
@@ -453,7 +454,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
       TopicVO topic = new TopicVO(tmd.topic());
 
       topic.setConfig(
-         Optional.ofNullable(topicConfigPathCache.getCurrentData(ZkUtils.TopicConfigPath() + "/" + topic.getName()))
+         Optional.ofNullable(topicConfigPathCache.getCurrentData(ZkUtils.getEntityConfigPath(ConfigType.Topic()) + "/" + topic.getName()))
             .map(this::readTopicConfig)
             .orElse(Collections.emptyMap()));
 
@@ -482,7 +483,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
 
    private List<Integer> getIsr(String topic, PartitionMetadata pmd)
    {
-      return pmd.isr().stream().map(Broker::id).collect(Collectors.toList());
+      return pmd.isr().stream().map(BrokerEndPoint::id).collect(Collectors.toList());
    }
 
    private Map<String, Object> readTopicConfig(ChildData d)
@@ -741,14 +742,14 @@ public class CuratorKafkaMonitor implements KafkaMonitor
       channel.send(request.underlying());
 
       final kafka.api.OffsetFetchResponse underlyingResponse =
-         kafka.api.OffsetFetchResponse.readFrom(channel.receive().buffer());
+         kafka.api.OffsetFetchResponse.readFrom(channel.receive().payload());
 
       LOG.debug("Received consumer offset response: {}", underlyingResponse);
 
       OffsetFetchResponse response = new OffsetFetchResponse(underlyingResponse);
 
       return response.offsets().entrySet().stream()
-         .filter(entry -> entry.getValue().error() == ErrorMapping.NoError())
+         .filter(entry -> entry.getValue().error().code() == ErrorMapping.NoError())
          .collect(Collectors.toMap(entry -> entry.getKey().partition(), entry -> entry.getValue().offset()));
    }
 
@@ -766,14 +767,14 @@ public class CuratorKafkaMonitor implements KafkaMonitor
 
    private Integer offsetManagerBroker(BlockingChannel channel, String groupId)
    {
-      final ConsumerMetadataRequest request =
-         new ConsumerMetadataRequest(groupId, (short) 0, 0, clientId());
+      final GroupCoordinatorRequest request =
+         new GroupCoordinatorRequest(groupId, (short) 0, 0, clientId());
 
       LOG.debug("Sending consumer metadata request: {}", request);
 
       channel.send(request);
-      ConsumerMetadataResponse response =
-         ConsumerMetadataResponse.readFrom(channel.receive().buffer());
+      GroupCoordinatorResponse response =
+          GroupCoordinatorResponse.readFrom(channel.receive().payload());
 
       LOG.debug("Received consumer metadata response: {}", response);
 
@@ -866,7 +867,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
                         {
                            channel.send(offsetRequest.underlying());
                            final kafka.api.OffsetResponse underlyingResponse =
-                              kafka.api.OffsetResponse.readFrom(channel.receive().buffer());
+                              kafka.api.OffsetResponse.readFrom(channel.receive().payload());
 
                            LOG.debug("Received offset response: {}", underlyingResponse);
 
