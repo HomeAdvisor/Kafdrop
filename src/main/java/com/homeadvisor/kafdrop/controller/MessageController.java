@@ -20,21 +20,16 @@ package com.homeadvisor.kafdrop.controller;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.homeadvisor.kafdrop.config.MessageFormatConfiguration;
-import com.homeadvisor.kafdrop.config.SchemaRegistryConfiguration;
 import com.homeadvisor.kafdrop.model.MessageVO;
 import com.homeadvisor.kafdrop.model.TopicVO;
 import com.homeadvisor.kafdrop.service.KafkaMonitor;
 import com.homeadvisor.kafdrop.service.MessageInspector;
 import com.homeadvisor.kafdrop.service.TopicNotFoundException;
-import com.homeadvisor.kafdrop.util.AvroMessageDeserializer;
-import com.homeadvisor.kafdrop.util.DefaultMessageDeserializer;
-import com.homeadvisor.kafdrop.util.MessageDeserializer;
-import com.homeadvisor.kafdrop.util.MessageFormat;
-
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
+import scala.reflect.Print;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -46,6 +41,8 @@ import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+
+import java.io.Console;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,12 +54,6 @@ public class MessageController
 
    @Autowired
    private MessageInspector messageInspector;
-
-   @Autowired
-   private MessageFormatConfiguration.MessageFormatProperties messageFormatProperties;
-
-   @Autowired
-   private SchemaRegistryConfiguration.SchemaRegistryProperties schemaRegistryProperties;
 
    /**
     * Human friendly view of reading messages.
@@ -78,17 +69,10 @@ public class MessageController
                                  BindingResult errors,
                                  Model model)
    {
-      final MessageFormat defaultFormat = messageFormatProperties.getFormat();
-
       if (messageForm.isEmpty())
       {
          final PartitionOffsetInfo defaultForm = new PartitionOffsetInfo();
-
-         defaultForm.setCount(10l);
-         defaultForm.setOffset(0l);
-         defaultForm.setPartition(0);
-         defaultForm.setFormat(defaultFormat);
-
+         defaultForm.setCount(1l);
          model.addAttribute("messageForm", defaultForm);
       }
 
@@ -96,21 +80,18 @@ public class MessageController
          .orElseThrow(() -> new TopicNotFoundException(topicName));
       model.addAttribute("topic", topic);
 
-      model.addAttribute("defaultFormat", defaultFormat);
-      model.addAttribute("messageFormats", MessageFormat.values());
-
       if (!messageForm.isEmpty() && !errors.hasErrors())
       {
-         final MessageDeserializer deserializer = getDeserializer(
-               topicName, messageForm.getFormat());
-
-         model.addAttribute("messages",
+            if ( messageForm.messageKey != null && !messageForm.messageKey.isEmpty() ) { // condition added by Tamalendu Nath
+                  model.addAttribute("messages",
+                            messageInspector.getMessagesByKey(topicName,messageForm.getmessageKey(), messageForm.getPartition(), messageForm.getCount()));
+            } else {
+                  model.addAttribute("messages",
                             messageInspector.getMessages(topicName,
                                                          messageForm.getPartition(),
                                                          messageForm.getOffset(),
-                                                         messageForm.getCount(),
-                                                         deserializer));
-
+                                                         messageForm.getCount()));
+            }
       }
 
       return "message-inspector";
@@ -133,9 +114,11 @@ public class MessageController
          @PathVariable("name") String topicName,
          @RequestParam(name = "partition", required = false) Integer partition,
          @RequestParam(name = "offset", required = false)    Long offset,
-         @RequestParam(name = "count", required = false)     Long count
+         @RequestParam(name = "count", required = false)     Long count,
+         @RequestParam(name = "messageKey", required = false)     String msgKey
    )
    {
+      
       if(partition == null || offset == null || count == null)
       {
          final TopicVO topic = kafkaMonitor.getTopic(topicName)
@@ -148,16 +131,12 @@ public class MessageController
       }
       else
       {
-         // Currently, only default deserialization supported via JSON API.
-         final MessageDeserializer deserializer = new DefaultMessageDeserializer();
-
          List<Object> messages = new ArrayList<>();
          List<MessageVO> vos = messageInspector.getMessages(
                topicName,
                partition,
                offset,
-               count,
-               deserializer);
+               count);
 
          if(vos != null)
          {
@@ -166,19 +145,6 @@ public class MessageController
 
          return messages;
       }
-   }
-
-   private MessageDeserializer getDeserializer(String topicName, MessageFormat format) {
-      final MessageDeserializer deserializer;
-
-      if (format == MessageFormat.AVRO) {
-         final String schemaRegistryUrl = schemaRegistryProperties.getConnect();
-         deserializer = new AvroMessageDeserializer(topicName, schemaRegistryUrl);
-      } else {
-         deserializer = new DefaultMessageDeserializer();
-      }
-
-      return deserializer;
    }
 
    /**
@@ -207,23 +173,24 @@ public class MessageController
        */
       @NotNull
       @Min(1)
-      @Max(100)
+      //Change this for changing the maximum number of events that you can query
+      @Max(100000)
       @JsonProperty("lastOffset")
       private Long count;
 
-      private MessageFormat format;
+      /**
+       * Need to clean this up. We're re-using this form for the JSON message API
+       * and it's a bit confusing to have the Java variable and JSON field named
+       * differently.
+       */
+      @NotNull
+      private String messageKey; //added by Tamalendu Nath
 
-      public PartitionOffsetInfo(int partition, long offset, long count, MessageFormat format)
+      public PartitionOffsetInfo(int partition, long offset, long count)
       {
          this.partition = partition;
          this.offset = offset;
          this.count = count;
-         this.format = format;
-      }
-
-      public PartitionOffsetInfo(int partition, long offset, long count)
-      {
-         this(partition, offset, count, MessageFormat.DEFAULT);
       }
 
       public PartitionOffsetInfo()
@@ -267,14 +234,14 @@ public class MessageController
          this.count = count;
       }
 
-      public MessageFormat getFormat()
+      public String getmessageKey() //added by Tamalendu Nath
       {
-         return format;
+         return messageKey;
       }
 
-      public void setFormat(MessageFormat format)
+      public void setmessageKey(String messageKey) //added by Tamalendu Nath
       {
-         this.format = format;
+         this.messageKey = messageKey;
       }
    }
 }

@@ -18,7 +18,7 @@
 
 package com.homeadvisor.kafdrop.model;
 
-public class MessageVO
+public class MessageVO implements java.io.Serializable
 {
    private String message;
    private String key;
