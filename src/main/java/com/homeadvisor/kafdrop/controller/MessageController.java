@@ -22,15 +22,18 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.homeadvisor.kafdrop.config.MessageFormatConfiguration;
 import com.homeadvisor.kafdrop.config.SchemaRegistryConfiguration;
+import com.homeadvisor.kafdrop.config.MessageConfiguration;
 import com.homeadvisor.kafdrop.model.MessageVO;
 import com.homeadvisor.kafdrop.model.TopicVO;
 import com.homeadvisor.kafdrop.service.KafkaMonitor;
 import com.homeadvisor.kafdrop.service.MessageInspector;
+import com.homeadvisor.kafdrop.service.SparkMessageInspector;
 import com.homeadvisor.kafdrop.service.TopicNotFoundException;
 import com.homeadvisor.kafdrop.util.AvroMessageDeserializer;
 import com.homeadvisor.kafdrop.util.DefaultMessageDeserializer;
 import com.homeadvisor.kafdrop.util.MessageDeserializer;
 import com.homeadvisor.kafdrop.util.MessageFormat;
+import com.homeadvisor.kafdrop.util.SearchType;
 
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -59,10 +62,16 @@ public class MessageController
    private MessageInspector messageInspector;
 
    @Autowired
+   private SparkMessageInspector sparkMessageInspector;
+
+   @Autowired
    private MessageFormatConfiguration.MessageFormatProperties messageFormatProperties;
 
    @Autowired
    private SchemaRegistryConfiguration.SchemaRegistryProperties schemaRegistryProperties;
+
+   @Autowired
+   private MessageConfiguration.MessageProperties searchTypeProperties;
 
    /**
     * Human friendly view of reading messages.
@@ -79,7 +88,7 @@ public class MessageController
                                  Model model)
    {
       final MessageFormat defaultFormat = messageFormatProperties.getFormat();
-
+      final SearchType defaultSearchType = searchTypeProperties.getType();
       if (messageForm.isEmpty())
       {
          final PartitionOffsetInfo defaultForm = new PartitionOffsetInfo();
@@ -98,21 +107,32 @@ public class MessageController
 
       model.addAttribute("defaultFormat", defaultFormat);
       model.addAttribute("messageFormats", MessageFormat.values());
-
-      if (!messageForm.isEmpty() && !errors.hasErrors())
-      {
-         final MessageDeserializer deserializer = getDeserializer(
-               topicName, messageForm.getFormat());
-
-         model.addAttribute("messages",
-                            messageInspector.getMessages(topicName,
-                                                         messageForm.getPartition(),
-                                                         messageForm.getOffset(),
-                                                         messageForm.getCount(),
-                                                         deserializer));
-
+      model.addAttribute("defaultSearchType", defaultSearchType);
+      model.addAttribute("searchType", SearchType.values());
+      
+      if (messageForm.getSearchby() != null && messageForm.getSearchby().name() == SearchType.Key.toString()) {
+         if (!messageForm.isEmptyMessageKey() && !errors.hasErrors())
+         {
+            model.addAttribute("messages",
+               sparkMessageInspector.getMessagesByKey(topicName,
+                                                            messageForm.getMessageKey(),
+                                                            messageForm.getCount()));
+         }
+      } else {
+         if (!messageForm.isEmpty() && !errors.hasErrors())
+         {
+            final MessageDeserializer deserializer = getDeserializer(
+                  topicName, messageForm.getFormat());
+   
+            model.addAttribute("messages",
+                               messageInspector.getMessages(topicName,
+                                                            messageForm.getPartition(),
+                                                            messageForm.getOffset(),
+                                                            messageForm.getCount(),
+                                                            deserializer));
+   
+         }
       }
-
       return "message-inspector";
    }
 
@@ -207,23 +227,24 @@ public class MessageController
        */
       @NotNull
       @Min(1)
-      @Max(100)
       @JsonProperty("lastOffset")
       private Long count;
 
       private MessageFormat format;
-
-      public PartitionOffsetInfo(int partition, long offset, long count, MessageFormat format)
+      private SearchType searchby;
+      private String messageKey;
+      public PartitionOffsetInfo(int partition, long offset, long count, MessageFormat format, SearchType searchby)
       {
          this.partition = partition;
          this.offset = offset;
          this.count = count;
          this.format = format;
+         this.searchby = searchby;
       }
 
       public PartitionOffsetInfo(int partition, long offset, long count)
       {
-         this(partition, offset, count, MessageFormat.DEFAULT);
+         this(partition, offset, count, MessageFormat.DEFAULT, SearchType.Offset);
       }
 
       public PartitionOffsetInfo()
@@ -236,7 +257,10 @@ public class MessageController
       {
          return partition == null && offset == null && (count == null || count == 1);
       }
-
+      public boolean isEmptyMessageKey()
+      {
+         return messageKey == null && (count == null || count == 0);
+      }
       public Integer getPartition()
       {
          return partition;
@@ -275,6 +299,24 @@ public class MessageController
       public void setFormat(MessageFormat format)
       {
          this.format = format;
+      }
+      public String getMessageKey() 
+      {
+         return this.messageKey;
+      }
+      public void setMessageKey(String messageKey) 
+      {
+         this.messageKey = messageKey;
+      }
+
+      public SearchType getSearchby()
+      {
+         return searchby;
+      }
+
+      public void setSearchby(SearchType searchby)
+      {
+         this.searchby = searchby;
       }
    }
 }

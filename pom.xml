@@ -12,7 +12,9 @@
       <spring.boot.version>1.3.6.RELEASE</spring.boot.version>
       <additionalparam>-Xdoclint:none</additionalparam>
       <curator.version>2.10.0</curator.version>
-
+      <kafka-client.version>0.10.2.0</kafka-client.version>
+      <scala.version>2.11</scala.version>
+      <spark.version>2.3.0</spark.version>
       <!-- name of parameter changed in latest mvn javadoc plugin version-->
       <additionalOptions>-Xdoclint:none</additionalOptions>
 
@@ -71,7 +73,7 @@
       </dependency>
       <dependency>
          <groupId>org.apache.kafka</groupId>
-         <artifactId>kafka_2.9.2</artifactId>
+         <artifactId>kafka_${scala.version}</artifactId>
          <version>0.8.2.2</version>
       </dependency>
       <dependency>
@@ -108,6 +110,36 @@
          <groupId>com.google.code.gson</groupId>
          <artifactId>gson</artifactId>
          <version>2.8.5</version>
+      </dependency>
+      <!-- spark dependency -->
+      <dependency>
+         <groupId>commons-codec</groupId>
+         <artifactId>commons-codec</artifactId>
+         <version>1.9</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-streaming-kafka-0-10 -->
+      <dependency>
+         <groupId>org.apache.spark</groupId>
+         <artifactId>spark-streaming-kafka-0-10_${scala.version}</artifactId>
+         <version>${spark.version}</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-streaming -->
+      <dependency>
+         <groupId>org.apache.spark</groupId>
+         <artifactId>spark-streaming_${scala.version}</artifactId>
+         <version>${spark.version}</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-core -->
+      <dependency>
+         <groupId>org.apache.spark</groupId>
+         <artifactId>spark-core_${scala.version}</artifactId>
+         <version>${spark.version}</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-sql -->
+      <dependency>
+         <groupId>org.apache.spark</groupId>
+         <artifactId>spark-sql_${scala.version}</artifactId>
+         <version>${spark.version}</version>
       </dependency>
 
       <!-- Spring Boot -->
@@ -336,7 +368,7 @@
                      </dependency>
                      <dependency>
                         <groupId>org.apache.kafka</groupId>
-                        <artifactId>kafka_2.9.2</artifactId>
+                        <artifactId>kafka_${scala.version}</artifactId>
                         <version>0.8.2.2</version>
                      </dependency>
                      <dependency>

@@ -16,11 +16,18 @@
  *
  */
 
+
 jQuery(document).ready(function() {
+    var isFormLoad
+    $(function() {
+        isFormLoad = true;
+        $('#searchby').trigger('change');
+        isFormLoad = false;
+    });
     jQuery(document).on('click', '.toggle-msg', function(e) {
-        var link=jQuery(this),
-            linkIcon=link.find('.fa'),
-            body=link.parent().find('.message-body');
+        var link = jQuery(this),
+            linkIcon = link.find('.fa'),
+            body = link.parent().find('.message-body');
 
         e.preventDefault();
 
@@ -28,8 +35,7 @@ jQuery(document).ready(function() {
         if (true == body.data('expanded')) {
             body.text(JSON.stringify(JSON.parse(body.text())));
             body.data('expanded', false);
-        }
-        else {
+        } else {
             body.text(JSON.stringify(JSON.parse(body.text()), null, 3));
             body.data('expanded', true);
         }
@@ -42,5 +48,23 @@ jQuery(document).ready(function() {
         jQuery('#firstOffset').text(firstOffset);
         jQuery('#lastOffset').text(lastOffset);
         jQuery('#partitionSize').text(lastOffset - firstOffset)
+    });
+
+    jQuery(document).on('change', '#searchby', function(e) {
+        var selectedOption = jQuery(this).children("option").filter(":selected").val();
+        if (isFormLoad == false) {
+            jQuery('#message-display').empty();
+        }
+        if (selectedOption.toLowerCase() == 'offset') {
+            jQuery('#partitionSizes').show();
+            jQuery('#offset').show();
+            jQuery('#dvMessageKey').hide();
+            jQuery('#dvMessageFormat').show();
+        } else {
+            jQuery('#partitionSizes').hide();
+            jQuery('#offset').hide();
+            jQuery('#dvMessageKey').show();
+            jQuery('#dvMessageFormat').hide();
+        }
     });
 })
