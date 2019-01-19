@@ -96,7 +96,7 @@
             <span class="label label-default">Compression:</span> ${msg.compressionCodec}
             <div>
             <a href="#" class="toggle-msg"><i class="fa fa-chevron-circle-right">&nbsp;</i></a>
-            <pre class="message-body">${msg.message!''}</pre>
+            <pre class="message-body"><xmp>${msg.message!''}</xmp></pre>
             </div>
         </div>
     </#list>
