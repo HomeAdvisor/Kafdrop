@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Configuration
-@ConditionalOnProperty("curator.discovery.enabled")
+@ConditionalOnProperty(value = "curator.discovery.enabled", havingValue = "true")
 public class ServiceDiscoveryConfiguration
 {
    @Autowired
