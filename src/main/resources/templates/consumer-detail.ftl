@@ -58,10 +58,6 @@
                             (${consumerTopic.assignedPartitionCount} of ${consumerTopic.partitions?size})</td>
                     </tr>
                     <tr>
-                        <td>Total Lag</td>
-                        <td>${consumerTopic.lag}</td>
-                    </tr>
-                    <tr>
                         <td>Max Lag</td>
                         <td>${consumerTopic.maxLag}</td>
                     </tr>
@@ -75,8 +71,10 @@
                     <th>Partition</th>
                     <th>First Offset</th>
                     <th>Last Offset</th>
-                    <th>Offset</th>
-                    <th>Lag</th>
+                    <th>Kafka Offset</th>
+                    <th>Kafka Lag</th>
+                    <th>Zookeeper Offset</th>
+                    <th>Zookeeper Lag</th>
                     <th>Owner</th>
                 </tr>
                 </thead>
@@ -86,8 +84,10 @@
                        <td>${p.partitionId}</td>
                        <td>${p.firstOffset}</td>
                        <td>${p.size}</td>
-                       <td>${p.offset}</td>
-                       <td>${p.lag}</td>
+                       <td>${p.consumerOffset.kafkaOffset}</td>
+                       <td>${p.kafkaLag}</td>
+                       <td>${p.consumerOffset.zookeeperOffset}</td>
+                       <td>${p.zookeeperLag}</td>
                        <td>${p.owner!''}</td>
                    </tr>
                 </#list>

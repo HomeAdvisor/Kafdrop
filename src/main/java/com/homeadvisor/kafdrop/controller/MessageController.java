@@ -142,7 +142,8 @@ public class MessageController
                .orElseThrow(() -> new TopicNotFoundException(topicName));
 
          List<Object> partitionList = new ArrayList<>();
-         topic.getPartitions().stream().forEach(vo -> partitionList.add(new PartitionOffsetInfo(vo.getId(), vo.getFirstOffset(), vo.getSize())));
+         topic.getPartitions()
+            .forEach(vo -> partitionList.add(new PartitionOffsetInfo(vo.getId(), vo.getFirstOffset(), vo.getSize())));
 
          return partitionList;
       }

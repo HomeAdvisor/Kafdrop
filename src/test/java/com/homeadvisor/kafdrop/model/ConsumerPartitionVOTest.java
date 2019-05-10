@@ -29,7 +29,7 @@ public class ConsumerPartitionVOTest
       final ConsumerPartitionVO partition = new ConsumerPartitionVO("test", "test", 0);
       partition.setFirstOffset(first);
       partition.setSize(last);
-      partition.setOffset(offset);
+      partition.setConsumerOffset(new ConsumerOffsetVO(offset, -1));
       assertEquals("Unexpected lag", expectedLag, partition.getLag());
    }
    @Test

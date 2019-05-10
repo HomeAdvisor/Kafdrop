@@ -54,6 +54,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -234,7 +235,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
    public List<BrokerVO> getBrokers()
    {
       validateInitialized();
-      return brokerCache.values().stream().collect(Collectors.toList());
+      return new ArrayList<>(brokerCache.values());
    }
 
    @Override
@@ -266,7 +267,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
    {
       if (brokerCache.size() > 0)
       {
-         List<Integer> brokerIds = brokerCache.keySet().stream().collect(Collectors.toList());
+         List<Integer> brokerIds = new ArrayList<>(brokerCache.keySet());
          Collections.shuffle(brokerIds);
          return brokerIds.get(0);
       }
@@ -333,11 +334,9 @@ public class CuratorKafkaMonitor implements KafkaMonitor
       topicVO.ifPresent(
          vo -> {
             getTopicPartitionSizes(vo, kafka.api.OffsetRequest.LatestTime())
-               .entrySet()
-               .forEach(entry -> vo.getPartition(entry.getKey()).ifPresent(p -> p.setSize(entry.getValue())));
+               .forEach((key, value) -> vo.getPartition(key).ifPresent(p -> p.setSize(value)));
             getTopicPartitionSizes(vo, kafka.api.OffsetRequest.EarliestTime())
-               .entrySet()
-               .forEach(entry -> vo.getPartition(entry.getKey()).ifPresent(p -> p.setFirstOffset(entry.getValue())));
+               .forEach((key, value) -> vo.getPartition(key).ifPresent(p -> p.setFirstOffset(value)));
          }
       );
       return topicVO;
@@ -641,7 +640,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
       {
          final TopicVO topic = topicOpt;
 
-         Map<Integer, Long> consumerOffsets = getConsumerOffsets(groupId, topic);
+         Map<Integer, ConsumerOffsetVO> consumerOffsets = getConsumerOffsets(groupId, topic);
 
          return topic.getPartitions().stream()
             .map(partition -> {
@@ -654,7 +653,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
                      .map(data -> new String(data.getData()))
                      .orElse(null));
 
-               consumerPartition.setOffset(consumerOffsets.getOrDefault(partitionId, -1L));
+               consumerPartition.setConsumerOffset(consumerOffsets.getOrDefault(partitionId, ConsumerOffsetVO.UNREAD));
 
                final Optional<TopicPartitionVO> topicPartition = topic.getPartition(partitionId);
                consumerPartition.setSize(topicPartition.map(TopicPartitionVO::getSize).orElse(-1L));
@@ -669,7 +668,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
       }
    }
 
-   private Map<Integer, Long> getConsumerOffsets(String groupId, TopicVO topic)
+   private Map<Integer, ConsumerOffsetVO> getConsumerOffsets(String groupId, TopicVO topic)
    {
       try
       {
@@ -685,9 +684,13 @@ public class CuratorKafkaMonitor implements KafkaMonitor
 
          Map<Integer, Long> zookeeperOffsets = zookeeperTask.get();
          Map<Integer, Long> kafkaOffsets = kafkaTask.get();
-         zookeeperOffsets.entrySet()
-            .forEach(entry -> kafkaOffsets.merge(entry.getKey(), entry.getValue(), Math::max));
-         return kafkaOffsets;
+
+         Map<Integer, ConsumerOffsetVO> offsets = new HashMap<>();
+
+         zookeeperOffsets.forEach(
+            (key, value) -> offsets.put(key, new ConsumerOffsetVO(value, kafkaOffsets.getOrDefault(key, -1L))));
+
+         return offsets;
       }
       catch (InterruptedException ex)
       {
@@ -733,8 +736,8 @@ public class CuratorKafkaMonitor implements KafkaMonitor
          topic.getPartitions().stream()
             .map(p -> new TopicAndPartition(topic.getName(), p.getId()))
             .collect(Collectors.toList()),
-         (short) (zookeeperOffsets ? 0 : 1), 0, // version 0 = zookeeper offsets, 1 = kafka offsets
-         clientId());
+         (short) (zookeeperOffsets ? 0 : kafka.api.OffsetFetchRequest.CurrentVersion()), // version 0 = zookeeper offsets, 1+ = kafka offsets
+         0, clientId());
 
       LOG.debug("Sending consumer offset request: {}", request);
 

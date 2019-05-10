@@ -23,7 +23,7 @@ public class ConsumerPartitionVO
    private final String groupId;
    private final String topic;
    private final int partitionId;
-   private long offset;
+   private ConsumerOffsetVO consumerOffset;
    private long size;
    private long firstOffset;
    private String owner;
@@ -50,9 +50,14 @@ public class ConsumerPartitionVO
       return partitionId;
    }
 
-   public void setOffset(long offset)
+   public void setConsumerOffset(ConsumerOffsetVO offset)
    {
-      this.offset = offset;
+      this.consumerOffset = offset;
+   }
+
+   public ConsumerOffsetVO getConsumerOffset()
+   {
+      return consumerOffset;
    }
 
    public long getSize()
@@ -77,6 +82,21 @@ public class ConsumerPartitionVO
 
    public long getLag()
    {
+      return getLag(getOffset());
+   }
+
+   public long getKafkaLag()
+   {
+      return getLag(getConsumerOffset().getKafkaOffset());
+   }
+
+   public long getZookeeperLag()
+   {
+      return getLag(getConsumerOffset().getZookeeperOffset());
+   }
+
+   private long getLag(long offset)
+   {
       if (size < 0 || firstOffset < 0)
       {
          return 0;
@@ -98,7 +118,7 @@ public class ConsumerPartitionVO
 
    public long getOffset()
    {
-      return offset;
+      return consumerOffset.getMaxOffset();
    }
 
    public String getOwner()
