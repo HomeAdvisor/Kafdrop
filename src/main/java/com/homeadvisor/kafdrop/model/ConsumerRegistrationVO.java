@@ -19,6 +19,9 @@
 package com.homeadvisor.kafdrop.model;
 
 import java.util.Map;
+import java.util.Objects;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public class ConsumerRegistrationVO
 {
@@ -43,5 +46,23 @@ public class ConsumerRegistrationVO
    public void setSubscriptions(Map<String, Integer> subscriptions)
    {
       this.subscriptions = subscriptions;
+   }
+
+   public boolean subscribesToTopic(String topic)
+   {
+      return subscriptions.keySet()
+         .stream().anyMatch(sub -> topicMatchesSubscription(topic, sub));
+   }
+
+   private boolean topicMatchesSubscription(String topic, String subscription)
+   {
+      try
+      {
+         return (topic.equals(subscription) || topic.matches(subscription));
+      }
+      catch (PatternSyntaxException ex)
+      {
+         return false;
+      }
    }
 }

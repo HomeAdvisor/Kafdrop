@@ -58,7 +58,7 @@ public class ConsumerVO implements Comparable<ConsumerVO>
    public List<ConsumerRegistrationVO> getActiveInstancesForTopic(String topic)
    {
       return activeInstances.stream()
-         .filter(reg -> reg.getSubscriptions().containsKey(topic))
+         .filter(registration -> registration.subscribesToTopic(topic))
          .collect(Collectors.toList());
    }
 
