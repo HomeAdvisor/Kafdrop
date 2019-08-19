@@ -18,42 +18,51 @@
 <@template.header "Topic: ${topic.name}: Messages">
    <style type="text/css">
        h1 { margin-bottom: 16px; }
-       #messageFormPanel { margin-top: 16px; }
-       #partitionSizes { margin-left: 16px; }
+       #messageFormPanel { margin-top: 0px; }
+       #partitionSizes { margin-left: 0px; }
        .toggle-msg { float: left;}
    </style>
 
   <script src="/js/message-inspector.js"></script>
+  <script type="text/javascript">
+ $("#partitionSizes").hide();
+</script>
 </@template.header>
 <#setting number_format="0">
-
-
-<h1>Topic Messages: <a href="/topic/${topic.name}">${topic.name}</a></h1>
+<h3>Topic Messages: <a href="/topic/${topic.name}">${topic.name}</a></h3>
 
 <#assign selectedPartition=messageForm.partition!0?number>
 <#assign selectedFormat=messageForm.format!defaultFormat>
-
-<div id="partitionSizes">
-    <#assign curPartition=topic.getPartition(selectedPartition).get()>
-    <span class="label label-default">First Offset:</span> <span id="firstOffset">${curPartition.firstOffset}</span>
-    <span class="label label-default">Last Offset:</span> <span id="lastOffset">${curPartition.size}</span>
-    <span class="label label-default">Size:</span> <span id="partitionSize">${curPartition.size - curPartition.firstOffset}</span>
-</div>
-
-<div id="messageFormPanel" class="panel panel-default">
+<#assign selectedSearchby=messageForm.searchby!defaultSearchType>
 <form method="GET" action="/topic/${topic.name}/messages" id="messageForm" class="form-inline panel-body">
-
+<div>
+    <label for="searchby">Search By</label>
+    <select style="width:80px;" id="searchby" name="searchby">
+    <#list searchType as st>
+        <option value="${st}"<#if st == selectedSearchby>selected="selected"</#if>>${st}</option>
+    </#list>
+    </select>
+</div>
+<div id="partitionSizes" style="vertical-align: middle;" class="panel panel-primary form-inline panel-body">
     <div class="form-group">
         <label for="partition">Partition</label>
-        <select id="partition" name="partition">
+        <select style="width:80px;" id="partition" name="partition">
         <#list topic.partitions as p>
             <option value="${p.id}" data-first-offset="${p.firstOffset}" data-last-offset="${p.size}" <#if p.id == selectedPartition>selected="selected"</#if>>${p.id}</option>
         </#list>
         </select>
+        <#assign curPartition=topic.getPartition(selectedPartition).get()>
+    <span class="label label-default">First Offset:</span> <span id="firstOffset">${curPartition.firstOffset}</span>
+    <span class="label label-default">Last Offset:</span> <span id="lastOffset">${curPartition.size}</span>
+    <span class="label label-default">Size:</span> <span id="partitionSize">${curPartition.size - curPartition.firstOffset}</span>
     </div>
+</div>
+
+<div id="messageFormPanel" class="panel panel-default form-inline panel-body">
+
 
     <@spring.bind path="messageForm.offset"/>
-    <div class="form-group ${spring.status.error?string("has-error", "")}">
+    <div id ="offset" class="form-group ${spring.status.error?string("has-error", "")}">
         <label class="control-label" for="offset">Offset</label>
         <@spring.formInput path="messageForm.offset" attributes='class="form-control"'/>
         <#if spring.status.error>
@@ -70,8 +79,17 @@
         </#if>
     </div>
 
-    <div class="form-group">
-        <label for="format">Message Format</label>
+    <@spring.bind path="messageForm.messageKey"/>
+    <div id="dvMessageKey" style="display:none" class="form-group ${spring.status.error?string("has-error", "")}">
+        <label class=control-label" for="messageKey">Messages Key&nbsp</label>
+        <@spring.formInput path="messageForm.messageKey" attributes='class="form-control ${spring.status.error?string("has-error", "")}"'/>
+        <#if spring.status.error>
+           <span class="text-danger"><i class="fa fa-times-circle"></i><@spring.showErrors "<br/>"/></span>
+        </#if>
+    </div>
+
+    <div id="dvMessageFormat" class="form-group">
+        <label for="format">Message Format&nbsp</label>
         <select id="format" name="format">
         <#list messageFormats as f>
             <option value="${f}"<#if f == selectedFormat>selected="selected"</#if>>${f}</option>
@@ -81,9 +99,9 @@
 
     <button class="btn btn-primary" type="submit"><i class="fa fa-search"></i> View Messages</button>
     
-</form>
-</div>
 
+</div>
+</form>
 <@spring.bind path="messageForm.*"/>
 <div id="message-display" class="container">
     <#if messages?? && messages?size gt 0>
