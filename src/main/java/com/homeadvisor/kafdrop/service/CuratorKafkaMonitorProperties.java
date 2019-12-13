@@ -18,6 +18,7 @@
 
 package com.homeadvisor.kafdrop.service;
 
+import com.homeadvisor.kafdrop.config.ZookeeperProperties;
 import org.hibernate.validator.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -37,6 +38,18 @@ public class CuratorKafkaMonitorProperties
 
    @NotBlank
    private String kafkaVersion = "0.8.2.2";
+
+   private ZookeeperProperties zookeeper = new ZookeeperProperties();
+
+   public ZookeeperProperties getZookeeper()
+   {
+      return zookeeper;
+   }
+
+   public void setZookeeper(ZookeeperProperties zookeeper)
+   {
+      this.zookeeper = zookeeper;
+   }
 
    public String getKafkaVersion()
    {
@@ -106,4 +119,5 @@ public class CuratorKafkaMonitorProperties
          this.backoffMillis = backoffMillis;
       }
    }
+
 }

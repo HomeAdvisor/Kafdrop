@@ -67,6 +67,10 @@ public class TopicVO implements Comparable<TopicVO>
       return Optional.ofNullable(partitions.get(partitionId));
    }
 
+   public Map<Integer, TopicPartitionVO> getPartitionMap() {
+     return Collections.unmodifiableMap(partitions);
+   }
+
    public Collection<TopicPartitionVO> getLeaderPartitions(int brokerId)
    {
       return partitions.values().stream()
@@ -140,13 +144,12 @@ public class TopicVO implements Comparable<TopicVO>
               .collect(Collectors.groupingBy(leader -> leader.getId().toString(), TreeMap::new, Collectors.toList()));
    }
 
-   public Map<String, BrokerReplicas> getBrokerReplicas()
+   public Map<Integer, BrokerReplicas> getBrokerReplicas()
    {
-      Map<String, BrokerReplicas> brokerReplicasMap = new TreeMap<>();
+      Map<Integer, BrokerReplicas> brokerReplicasMap = new TreeMap<>();
       partitions.values().stream()
          .flatMap(tp -> tp.getReplicas().stream())
-         .forEach(r -> brokerReplicasMap.computeIfAbsent(r.getId().toString(),
-                                                         BrokerReplicas::new)
+         .forEach(r -> brokerReplicasMap.computeIfAbsent(r.getId(), id -> new BrokerReplicas(id.toString()))
             .addReplica(r));
       return brokerReplicasMap;
    }

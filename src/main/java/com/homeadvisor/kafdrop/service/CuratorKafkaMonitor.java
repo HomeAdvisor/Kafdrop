@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HomeAdvisor, Inc.
+ * Copyright 2019 HomeAdvisor, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,17 +21,7 @@ package com.homeadvisor.kafdrop.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.homeadvisor.kafdrop.model.BrokerVO;
-import com.homeadvisor.kafdrop.model.ClusterSummaryVO;
-import com.homeadvisor.kafdrop.model.ConsumerOffsetVO;
-import com.homeadvisor.kafdrop.model.ConsumerPartitionVO;
-import com.homeadvisor.kafdrop.model.ConsumerRegistrationVO;
-import com.homeadvisor.kafdrop.model.ConsumerTopicVO;
-import com.homeadvisor.kafdrop.model.ConsumerVO;
-import com.homeadvisor.kafdrop.model.TopicPartitionStateVO;
-import com.homeadvisor.kafdrop.model.TopicPartitionVO;
-import com.homeadvisor.kafdrop.model.TopicRegistrationVO;
-import com.homeadvisor.kafdrop.model.TopicVO;
+import com.homeadvisor.kafdrop.model.*;
 import com.homeadvisor.kafdrop.util.BrokerChannel;
 import com.homeadvisor.kafdrop.util.Version;
 import kafka.api.ConsumerMetadataRequest;
@@ -39,51 +29,27 @@ import kafka.api.PartitionOffsetRequestInfo;
 import kafka.cluster.Broker;
 import kafka.common.ErrorMapping;
 import kafka.common.TopicAndPartition;
-import kafka.javaapi.ConsumerMetadataResponse;
-import kafka.javaapi.OffsetFetchRequest;
-import kafka.javaapi.OffsetFetchResponse;
-import kafka.javaapi.OffsetRequest;
-import kafka.javaapi.OffsetResponse;
-import kafka.javaapi.PartitionMetadata;
-import kafka.javaapi.TopicMetadata;
-import kafka.javaapi.TopicMetadataRequest;
-import kafka.javaapi.TopicMetadataResponse;
+import kafka.javaapi.*;
 import kafka.network.BlockingChannel;
 import kafka.utils.ZKGroupDirs;
 import kafka.utils.ZKGroupTopicDirs;
 import kafka.utils.ZkUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.NodeCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.*;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.framework.recipes.cache.TreeCache;
-import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
@@ -93,14 +59,14 @@ import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 @Service
+@Qualifier("curator")
+@ConditionalOnProperty(name = "kafdrop.monitor.legacyConsumer.enabled", havingValue = "true", matchIfMissing = true)
 public class CuratorKafkaMonitor implements KafkaMonitor
 {
    private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-   @Autowired
    private CuratorFramework curatorFramework;
 
-   @Autowired
    private ObjectMapper objectMapper;
 
    private PathChildrenCache brokerPathCache;
@@ -117,15 +83,19 @@ public class CuratorKafkaMonitor implements KafkaMonitor
 
    private ForkJoinPool threadPool;
 
-   @Autowired
    private CuratorKafkaMonitorProperties properties;
    private Version kafkaVersion;
 
    private RetryTemplate retryTemplate;
 
-   @PostConstruct
-   public void start() throws Exception
+   public CuratorKafkaMonitor(CuratorFramework curatorFramework,
+                              CuratorKafkaMonitorProperties properties,
+                              ObjectMapper objectMapper) throws Exception
    {
+      this.curatorFramework = curatorFramework;
+      this.properties = properties;
+      this.objectMapper = objectMapper;
+
       try
       {
          kafkaVersion = new Version(properties.getKafkaVersion());
@@ -205,7 +175,8 @@ public class CuratorKafkaMonitor implements KafkaMonitor
 
    private void updateController()
    {
-      Optional.ofNullable(controllerNodeCache.getCurrentData())
+      Optional.ofNullable(controllerNodeCache)
+         .map(NodeCache::getCurrentData)
          .map(data -> {
             try
             {
@@ -308,11 +279,6 @@ public class CuratorKafkaMonitor implements KafkaMonitor
       {
          return null;
       }
-   }
-
-   public ClusterSummaryVO getClusterSummary()
-   {
-      return getClusterSummary(getTopics());
    }
 
    @Override
@@ -472,12 +438,12 @@ public class CuratorKafkaMonitor implements KafkaMonitor
       TopicPartitionVO partition = new TopicPartitionVO(pmd.partitionId());
       if (pmd.leader() != null)
       {
-         partition.addReplica(new TopicPartitionVO.PartitionReplica(pmd.leader().id(), true, true));
+         partition.addReplica(new TopicPartitionVO.PartitionReplica(pmd.leader().id(), true, true, false));
       }
 
       final List<Integer> isr = getIsr(topic, pmd);
       pmd.replicas().stream()
-         .map(replica -> new TopicPartitionVO.PartitionReplica(replica.id(), isr.contains(replica.id()), false))
+         .map(replica -> new TopicPartitionVO.PartitionReplica(replica.id(), isr.contains(replica.id()), false, false))
          .forEach(partition::addReplica);
       return partition;
    }
@@ -518,25 +484,12 @@ public class CuratorKafkaMonitor implements KafkaMonitor
    }
 
    @Override
-   public List<ConsumerVO> getConsumers()
-   {
-      validateInitialized();
-      return getConsumerStream(null).collect(Collectors.toList());
-   }
-
-   @Override
    public List<ConsumerVO> getConsumers(final TopicVO topic)
    {
       validateInitialized();
       return getConsumerStream(topic)
          .filter(consumer -> consumer.getTopic(topic.getName()) != null)
          .collect(Collectors.toList());
-   }
-
-   @Override
-   public List<ConsumerVO> getConsumers(final String topic)
-   {
-      return getConsumers(getTopic(topic).get());
    }
 
    private Stream<ConsumerVO> getConsumerStream(TopicVO topic)
@@ -556,15 +509,11 @@ public class CuratorKafkaMonitor implements KafkaMonitor
    }
 
    @Override
-   public Optional<ConsumerVO> getConsumerByTopicName(String groupId, String topicName)
-   {
-      return getConsumerByTopic(groupId, Optional.of(topicName).flatMap(this::getTopic).orElse(null));
-   }
-
-   @Override
    public Optional<ConsumerVO> getConsumerByTopic(String groupId, TopicVO topic)
    {
       final ConsumerVO consumer = new ConsumerVO(groupId);
+      consumer.setLegacy(true);
+
       final ZKGroupDirs groupDirs = new ZKGroupDirs(groupId);
 
       if (consumerTreeCache.getCurrentData(groupDirs.consumerGroupDir()) == null) return Optional.empty();
@@ -600,7 +549,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
       }
 
       topicStream
-         .map(ConsumerTopicVO::new)
+         .map(t -> new ConsumerTopicVO(t, groupId))
          .forEach(consumerTopic -> {
             getConsumerPartitionStream(groupId, consumerTopic.getTopic(), topic)
                .forEach(consumerTopic::addOffset);

@@ -131,7 +131,11 @@
         <tbody>
         <#list consumers![] as c>
             <tr>
+                <#if c.legacy>
+                <td><a href="/legacy/consumer/${c.groupId}">${c.groupId}</a> (legacy)</td>
+                <#else>
                 <td><a href="/consumer/${c.groupId}">${c.groupId}</a></td>
+                </#if>
                 <td>${c.getTopic(topic.name).lag}</td>
                 <td>
                     <ul class="list-unstyled">

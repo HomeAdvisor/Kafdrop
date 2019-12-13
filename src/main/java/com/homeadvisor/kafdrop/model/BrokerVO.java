@@ -31,6 +31,11 @@ public class BrokerVO
    private int version;
    private boolean controller;
    private Date timestamp;
+   private String rack;
+
+   public BrokerVO()
+   {
+   }
 
    public int getId()
    {
@@ -101,5 +106,15 @@ public class BrokerVO
    public void setController(boolean controller)
    {
       this.controller = controller;
+   }
+
+   public String getRack()
+   {
+      return rack;
+   }
+
+   public void setRack(String rack)
+   {
+      this.rack = rack;
    }
 }

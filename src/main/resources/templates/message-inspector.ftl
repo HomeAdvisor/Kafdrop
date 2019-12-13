@@ -21,6 +21,10 @@
        #messageFormPanel { margin-top: 16px; }
        #partitionSizes { margin-left: 16px; }
        .toggle-msg { float: left;}
+       .toggle-header { float: left;}
+       .message-headers { display: none; }
+       .header-key { margin-right: 6px; }
+       .message-wrapper { margin-top: 6px;}
    </style>
 
   <script src="/js/message-inspector.js"></script>
@@ -90,11 +94,34 @@
     <#list messages as msg>
         <#assign offset=messageForm.offset + msg_index>
         <div data-offset="${offset}" class="message-detail">
-            <span class="label label-default">Offset:</span> ${offset}
+            <span class="label label-default">Offset:</span> ${msg.offset}
             <span class="label label-default">Key:</span> ${msg.key!''}
-            <span class="label label-default">Checksum/Computed:</span> <span <#if !msg.valid>class="text-danger"</#if>>${msg.checksum}/${msg.computedChecksum}</span>
-            <span class="label label-default">Compression:</span> ${msg.compressionCodec}
-            <div>
+
+            <span class="label label-default">Timestamp:</span>
+            <#if msg.timestampType = 'NoTimestampType'>
+                None
+            <#else>
+                ${msg.timestamp} (${msg.timestampType!'Unkown'})
+            </#if>
+            <#if msg.headers?size gt 0>
+                <div class="headers-wrapper">
+                    <a href="#" class="toggle-header"><i class="fa fa-plus-circle">&nbsp;</i></a>
+                    <div class="message-headers-label">
+                        Headers
+                    </div>
+                    <div class="message-headers">
+                        <table>
+                        <#list msg.headers?keys as key>
+                            <tr>
+                                <td class="header-key label label-info">${key}:</td>
+                                <td class="header-value">${msg.headers[key]}</td>
+                            </tr>
+                        </#list>
+                        </table>
+                    </div>
+                </div>
+            </#if>
+            <div class="message-wrapper">
             <a href="#" class="toggle-msg"><i class="fa fa-chevron-circle-right">&nbsp;</i></a>
             <pre class="message-body">${msg.message!''}</pre>
             </div>

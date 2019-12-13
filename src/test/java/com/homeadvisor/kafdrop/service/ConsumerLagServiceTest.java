@@ -71,7 +71,7 @@ public class ConsumerLagServiceTest
    {
       TEST_CONSUMER = new ConsumerVO(CONSUMER_GROUP_ID);
 
-      ConsumerTopicVO topic0 = new ConsumerTopicVO(TOPIC0_ID);
+      ConsumerTopicVO topic0 = new ConsumerTopicVO(TOPIC0_ID, CONSUMER_GROUP_ID);
       ConsumerPartitionVO partition0 = new ConsumerPartitionVO(CONSUMER_GROUP_ID, TOPIC0_ID, 0);
       partition0.setSize(randomLong(100, 200));
       ConsumerOffsetVO offset0 = new ConsumerOffsetVO(randomLong(1, 99), randomLong(1, 99));
@@ -79,7 +79,7 @@ public class ConsumerLagServiceTest
       topic0.addOffset(partition0);
       TEST_CONSUMER.addTopic(topic0);
 
-      ConsumerTopicVO topic1 = new ConsumerTopicVO(TOPIC1_ID);
+      ConsumerTopicVO topic1 = new ConsumerTopicVO(TOPIC1_ID, CONSUMER_GROUP_ID);
       ConsumerPartitionVO partition1 = new ConsumerPartitionVO(CONSUMER_GROUP_ID, TOPIC1_ID, 1);
       partition1.setSize(randomLong(100, 200));
       ConsumerOffsetVO offset1 = new ConsumerOffsetVO(randomLong(1, 99), randomLong(1, 99));

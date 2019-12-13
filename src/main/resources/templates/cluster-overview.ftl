@@ -16,6 +16,9 @@
 <#import "lib/template.ftl" as template>
 <@template.header "Broker List"/>
 
+<style type="text/css">
+    td.broker-id { white-space: nowrap; }
+</style>
 <script src="/js/powerFilter.js"></script>
 
 
@@ -27,10 +30,6 @@
         <div id="cluster-overview">
             <table class="table table-bordered">
                 <tbody>
-                <tr>
-                    <td>Zookeeper Host Configuration</td>
-                    <td><#list zookeeper.connectList as z>${z}<#if z_has_next>, </#if></#list></td>
-                </tr>
                 <tr>
                     <td>Total Topics</td>
                     <td>${clusterSummary.topicCount}</td>
@@ -58,26 +57,28 @@
             <h3>Brokers</h3>
             <table class="table table-bordered">
                 <thead>
+                <#assign brokerCols=0>
                 <tr>
-                    <th>ID</th>
-                    <th>Host</th>
-                    <th>Port</th>
-                    <th>JMX Port</th>
-                    <th>Version</th>
-                    <th>
+                    <th class="broker-id">ID</th><#assign brokerCols=brokerCols+1>
+                    <th>Host</th><#assign brokerCols=brokerCols+1>
+                    <th>Rack</th><#assign brokerCols=brokerCols+1>
+                    <th>Port</th><#assign brokerCols=brokerCols+1>
+                    <th>JMX Port</th><#assign brokerCols=brokerCols+1>
+                    <th>Version</th><#assign brokerCols=brokerCols+1>
+                    <th><#assign brokerCols=brokerCols+1>
                         Start Time
                         <a title="Time the broker joined the cluster"
                            data-toggle="tooltip" data-placement="top" href="#"
                         ><i class="fa fa-question-circle"></i></a>
                     </th>
-                    <th>Controller?</th>
-                    <th>
+                    <th>Controller?</th><#assign brokerCols=brokerCols+1>
+                    <th><#assign brokerCols=brokerCols+1>
                         Partition Leadership (% of Total)
                         <a title="# of partitions this broker is the leader for"
                            data-toggle="tooltip" data-placement="top" href="#"
                         ><i class="fa fa-question-circle"></i></a>
                     </th>
-                    <th>
+                    <th><#assign brokerCols=brokerCols+1>
                         Lagging Replicas
                         <a title="# of replicas on this broker that have fallen behind the leader"
                            data-toggle="tooltip" data-placement="top" href="#"
@@ -88,21 +89,22 @@
                 <tbody>
                 <#if brokers?size == 0>
                     <tr>
-                        <td class="danger text-danger" colspan="8"><i class="fa fa-warning"></i> No brokers available</td>
+                        <td class="danger text-danger" colspan="${brokerCols}"><i class="fa fa-warning"></i> No brokers available</td>
                     </tr>
                 <#elseif missingBrokerIds?size gt 0>
                     <tr>
-                        <td class="danger text-danger" colspan="8"><i class="fa fa-warning"></i> Missing brokers: <#list missingBrokerIds as b>${b}<#if b_has_next>, </#if></#list></td>
+                        <td class="danger text-danger" colspan="${brokerCols}"><i class="fa fa-warning"></i> Missing brokers: <#list missingBrokerIds as b>${b}<#if b_has_next>, </#if></#list></td>
                     </tr>
                 </#if>
                 <#list brokers as b>
                 <tr>
-                    <td><a href="/broker/${b.id}"><i class="fa fa-info-circle fa-lg"></i> ${b.id}</a></td>
+                    <td class="broker-id"><a href="/broker/${b.id}"><i class="fa fa-info-circle fa-lg"></i> ${b.id}</a></td>
                     <td>${b.host}</td>
+                    <td>${b.rack!''}</td>
                     <td>${b.port?string}</td>
-                    <td>${b.jmxPort?string}</td>
-                    <td>${b.version}</td>
-                    <td>${b.timestamp?string["yyyy-MM-dd HH:mm:ss.SSSZ"]}</td>
+                    <td>${(b.jmxPort?string)!''}</td>
+                    <td>${b.version!''}</td>
+                    <td>${(b.timestamp?string["yyyy-MM-dd HH:mm:ss.SSSZ"])!''}</td>
                     <td><@template.yn b.controller/></td>
                     <td>${(clusterSummary.getBrokerLeaderPartitionCount(b.id))!0} (${(((clusterSummary.getBrokerLeaderPartitionCount(b.id))!0)/clusterSummary.partitionCount)?string.percent})</td>
                     <td>${(clusterSummary.getBrokerUnderReplicationCount(b.id))!0}</td>

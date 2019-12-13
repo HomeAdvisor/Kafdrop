@@ -18,7 +18,7 @@
 
 <#setting number_format="0">
 
-<h1>Kafka Consumer: ${consumer.groupId}</h1>
+<h1>Kafka Consumer: ${consumer.groupId} <#if consumer.legacy>(legacy)</#if></h1>
 
 <div id="overview">
     <h2>Overview</h2>
@@ -43,7 +43,7 @@
 <div id="topics">
 <#list consumer.topics as consumerTopic>
     <#assign tableId='topic-${consumerTopic_index}-table'>
-    <h2><@template.toggleLink target="#${tableId}" anchor='${tableId}' /> Topic: <a href="/topic/${consumerTopic.topic}">${consumerTopic.topic}</a></h2>
+    <h2><@template.toggleLink target="#${tableId}" anchor='${tableId}' /> Topic: <a href="/consumer/${consumer.groupId}/${consumerTopic.topic}">${consumerTopic.topic}</a></h2>
     <div id="${tableId}">
         <p>
             <table class="table table-bordered overview">
@@ -71,10 +71,15 @@
                     <th>Partition</th>
                     <th>First Offset</th>
                     <th>Last Offset</th>
-                    <th>Kafka Offset</th>
-                    <th>Kafka Lag</th>
-                    <th>Zookeeper Offset</th>
-                    <th>Zookeeper Lag</th>
+                    <#if consumer.legacy>
+                       <th>Kafka Offset</th>
+                       <th>Kafka Lag</th>
+                       <th>Zookeeper Offset</th>
+                       <th>Zookeeper Lag</th>
+                    <#else>
+                        <th>Current Offset</th>
+                        <th>Lag</th>
+                    </#if>
                     <th>Owner</th>
                 </tr>
                 </thead>
@@ -86,8 +91,10 @@
                        <td>${p.size}</td>
                        <td>${p.consumerOffset.kafkaOffset}</td>
                        <td>${p.kafkaLag}</td>
-                       <td>${p.consumerOffset.zookeeperOffset}</td>
-                       <td>${p.zookeeperLag}</td>
+                       <#if consumer.legacy>
+                         <td>${p.consumerOffset.zookeeperOffset}</td>
+                         <td>${p.zookeeperLag}</td>
+                       </#if>
                        <td>${p.owner!''}</td>
                    </tr>
                 </#list>

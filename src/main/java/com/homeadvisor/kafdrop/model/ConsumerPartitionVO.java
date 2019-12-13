@@ -23,7 +23,7 @@ public class ConsumerPartitionVO
    private final String groupId;
    private final String topic;
    private final int partitionId;
-   private ConsumerOffsetVO consumerOffset;
+   private ConsumerOffsetVO consumerOffset = new ConsumerOffsetVO(-1L , -1L);
    private long size;
    private long firstOffset;
    private String owner;

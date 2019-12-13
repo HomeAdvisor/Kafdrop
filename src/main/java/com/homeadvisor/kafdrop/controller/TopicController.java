@@ -28,6 +28,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -43,8 +44,12 @@ import java.util.stream.Collectors;
 @RequestMapping("/topic")
 public class TopicController
 {
-   @Autowired
-   private KafkaMonitor kafkaMonitor;
+   private final KafkaMonitor kafkaMonitor;
+
+   public TopicController(@Qualifier("legacyConsumer") KafkaMonitor kafkaMonitor)
+   {
+      this.kafkaMonitor = kafkaMonitor;
+   }
 
    @RequestMapping("/{name:.+}")
    public String topicDetails(@PathVariable("name") String topicName, Model model)

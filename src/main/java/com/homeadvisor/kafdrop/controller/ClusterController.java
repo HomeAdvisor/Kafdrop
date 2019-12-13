@@ -18,7 +18,7 @@
 
 package com.homeadvisor.kafdrop.controller;
 
-import com.homeadvisor.kafdrop.config.CuratorConfiguration;
+import com.homeadvisor.kafdrop.config.ZookeeperProperties;
 import com.homeadvisor.kafdrop.model.BrokerVO;
 import com.homeadvisor.kafdrop.model.ClusterSummaryVO;
 import com.homeadvisor.kafdrop.model.TopicVO;
@@ -44,7 +44,7 @@ public class ClusterController
    private KafkaMonitor kafkaMonitor;
 
    @Autowired
-   private CuratorConfiguration.ZookeeperProperties zookeeperProperties;
+   private ZookeeperProperties zookeeperProperties;
 
    @RequestMapping("/")
    public String clusterInfo(Model model,
@@ -107,7 +107,7 @@ public class ClusterController
     */
    public static class ClusterInfoVO
    {
-      public CuratorConfiguration.ZookeeperProperties zookeeper;
+      public ZookeeperProperties zookeeper;
       public ClusterSummaryVO summary;
       public List<BrokerVO> brokers;
       public List<TopicVO> topics;

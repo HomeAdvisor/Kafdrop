@@ -18,14 +18,30 @@
 
 package com.homeadvisor.kafdrop.model;
 
+import java.util.Map;
+import java.util.TreeMap;
+
 public class MessageVO
 {
    private String message;
    private String key;
-   private boolean valid;
-   private long checksum;
-   private long computedChecksum;
-   private String compressionCodec;
+   private String topic;
+   private int partition;
+   private long offset;
+   private boolean valid = true;
+   private long timestamp;
+   private String timestampType;
+   private final Map<String, String> headers = new TreeMap<>();
+
+   public void addHeader(String key, String value)
+   {
+      headers.put(key, value);
+   }
+
+   public Map<String, String> getHeaders()
+   {
+      return headers;
+   }
 
    public boolean isValid()
    {
@@ -35,6 +51,36 @@ public class MessageVO
    public void setValid(boolean valid)
    {
       this.valid = valid;
+   }
+
+   public String getTopic()
+   {
+      return topic;
+   }
+
+   public void setTopic(String topic)
+   {
+      this.topic = topic;
+   }
+
+   public int getPartition()
+   {
+      return partition;
+   }
+
+   public void setPartition(int partition)
+   {
+      this.partition = partition;
+   }
+
+   public long getOffset()
+   {
+      return offset;
+   }
+
+   public void setOffset(long offset)
+   {
+      this.offset = offset;
    }
 
    public String getMessage()
@@ -57,33 +103,23 @@ public class MessageVO
       this.key = key;
    }
 
-   public long getChecksum()
+   public long getTimestamp()
    {
-      return checksum;
+      return timestamp;
    }
 
-   public void setChecksum(long checksum)
+   public void setTimestamp(long timestamp)
    {
-      this.checksum = checksum;
+      this.timestamp = timestamp;
    }
 
-   public long getComputedChecksum()
+   public String getTimestampType()
    {
-      return computedChecksum;
+      return timestampType;
    }
 
-   public void setComputedChecksum(long computedChecksum)
+   public void setTimestampType(String timestampType)
    {
-      this.computedChecksum = computedChecksum;
-   }
-
-   public String getCompressionCodec()
-   {
-      return compressionCodec;
-   }
-
-   public void setCompressionCodec(String compressionCodec)
-   {
-      this.compressionCodec = compressionCodec;
+      this.timestampType = timestampType;
    }
 }

@@ -19,28 +19,24 @@
 package com.homeadvisor.kafdrop;
 
 import com.google.common.base.Throwables;
-import com.homeadvisor.kafdrop.config.ini.IniFilePropertySource;
-import com.homeadvisor.kafdrop.config.ini.IniFileReader;
+import org.apache.logging.log4j.ThreadContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.Banner;
-import org.springframework.boot.actuate.autoconfigure.MetricFilterAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
-import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
-import java.io.*;
-import java.util.Objects;
-import java.util.stream.Stream;
+import java.io.File;
+import java.lang.management.ManagementFactory;
 
-@SpringBootApplication(exclude = MetricFilterAutoConfiguration.class)
+@SpringBootApplication
 public class KafDrop
 {
    private final static Logger LOG = LoggerFactory.getLogger(KafDrop.class);
@@ -49,8 +45,7 @@ public class KafDrop
    {
       new SpringApplicationBuilder(KafDrop.class)
          .bannerMode(Banner.Mode.OFF)
-         .listeners(new EnvironmentSetupListener(),
-                    new LoggingConfigurationListener())
+         .listeners(new LoggingConfigurationListener())
          .run(args);
    }
 
@@ -91,53 +86,24 @@ public class KafDrop
          {
             System.setProperty(PROP_SPRING_BOOT_LOG_LEVEL, "DEBUG");
          }
+         setProccessId();
 
       }
 
-   }
-
-   private static class EnvironmentSetupListener implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, Ordered
-   {
-      private static final String SM_CONFIG_DIR = "sm.config.dir";
-      private static final String CONFIG_SUFFIX = "-config.ini";
-
-      @Override
-      public int getOrder()
+      private void setProccessId()
       {
-         return Ordered.HIGHEST_PRECEDENCE + 10;
-      }
-
-      @Override
-      public void onApplicationEvent(ApplicationEnvironmentPreparedEvent event)
-      {
-         final ConfigurableEnvironment environment = event.getEnvironment();
-         if (environment.containsProperty(SM_CONFIG_DIR))
+         try
          {
-            Stream.of("kafdrop", "global")
-               .map(name -> readProperties(environment, name))
-               .filter(Objects::nonNull)
-               .forEach(iniPropSource -> environment.getPropertySources()
-                  .addBefore("applicationConfigurationProperties", iniPropSource));
+            ThreadContext.put("PID", ManagementFactory.getRuntimeMXBean().getName().replaceAll("@.*", ""));
+         }
+         catch(Exception e)
+         {
+            LOG.warn("Unable to determine process ID, setting to -1");
+            ThreadContext.put("PID", "-1");
          }
       }
 
-      private IniFilePropertySource readProperties(Environment environment, String name)
-      {
-         final File file = new File(environment.getProperty(SM_CONFIG_DIR), name + CONFIG_SUFFIX);
-         if (file.exists() && file.canRead())
-         {
-            try (InputStream in = new FileInputStream(file);
-                 Reader reader = new InputStreamReader(in, "UTF-8"))
-            {
-               return new IniFilePropertySource(name, new IniFileReader().read(reader), environment.getActiveProfiles());
-            }
-            catch (IOException ex)
-            {
-               LOG.error("Unable to read configuration file {}", file, ex);
-            }
-         }
-         return null;
-      }
+
    }
 
    @Bean

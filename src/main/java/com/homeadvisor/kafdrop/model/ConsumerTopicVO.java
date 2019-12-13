@@ -18,19 +18,18 @@
 
 package com.homeadvisor.kafdrop.model;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.TreeMap;
+import java.util.*;
 
 public class ConsumerTopicVO
 {
    private final String topic;
+   private final String groupId;
    private final Map<Integer, ConsumerPartitionVO> offsets = new TreeMap<>();
 
-   public ConsumerTopicVO(String topic)
+   public ConsumerTopicVO(String topic, String groupId)
    {
       this.topic = topic;
+      this.groupId = groupId;
    }
 
    public String getTopic()
@@ -62,6 +61,16 @@ public class ConsumerTopicVO
    public Collection<ConsumerPartitionVO> getPartitions()
    {
       return offsets.values();
+   }
+
+   public ConsumerPartitionVO getPartition(int partitionId)
+   {
+      return offsets.get(partitionId);
+   }
+
+   public ConsumerPartitionVO getOrCreatePartition(int partitionId)
+   {
+      return offsets.computeIfAbsent(partitionId, id -> new ConsumerPartitionVO(groupId, topic, id));
    }
 
    public double getCoveragePercent()

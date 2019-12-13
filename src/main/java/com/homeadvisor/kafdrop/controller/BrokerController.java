@@ -47,6 +47,8 @@ public class BrokerController
       model.addAttribute("broker", kafkaMonitor.getBroker(brokerId)
          .orElseThrow(() -> new BrokerNotFoundException(String.valueOf(brokerId))));
       model.addAttribute("topics", kafkaMonitor.getTopics());
+      kafkaMonitor.getBrokerConfiguration(brokerId)
+         .ifPresent(config -> model.addAttribute("brokerConfig", config));
       return "broker-detail";
    }
 

@@ -28,11 +28,22 @@ public class ConsumerVO implements Comparable<ConsumerVO>
    private String groupId;
    private Map<String, ConsumerTopicVO> topics = new TreeMap<>();
    private List<ConsumerRegistrationVO> activeInstances = new ArrayList<>();
+   private boolean legacy = false;
 
    public ConsumerVO(String groupId)
    {
       Validate.notEmpty("groupId is required");
       this.groupId = groupId;
+   }
+
+   public boolean isLegacy()
+   {
+      return legacy;
+   }
+
+   public void setLegacy(boolean legacy)
+   {
+      this.legacy = legacy;
    }
 
    public String getGroupId()
@@ -70,6 +81,17 @@ public class ConsumerVO implements Comparable<ConsumerVO>
    public ConsumerTopicVO getTopic(String topic)
    {
       return topics.get(topic);
+   }
+
+   public ConsumerTopicVO getOrCreateTopic(String topic)
+   {
+      ConsumerTopicVO consumerTopic = getTopic(topic);
+      if (consumerTopic == null)
+      {
+         consumerTopic = new ConsumerTopicVO(topic, groupId);
+         addTopic(consumerTopic);
+      }
+      return consumerTopic;
    }
 
    public Collection<ConsumerTopicVO> getTopics()

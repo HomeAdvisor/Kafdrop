@@ -10,9 +10,20 @@ spring:
          fail_on_unknown_properties: false
          read_unknown_enum_values_as_null: true
 
-endpoints.jmx.domain: ${spring.jmx.default_domain}
 metrics.jmx.domain: ${spring.jmx.default_domain}-metrics
-management.contextPath: /debug
+management:
+   endpoints:
+      web:
+         basePath: /sm/debug
+         exposure:
+            include: "*"
+      jmx:
+         domain: ${spring.jmx.default_domain}
+         exposure:
+            include: "*"
+   endpoint:
+      health:
+         show-details: "ALWAYS"
 
 kafdrop.monitor:
    kafkaVersion: "0.8.2.2"
@@ -21,6 +32,15 @@ kafdrop.monitor:
       maxAttempts: 3
       backoffMillis: 1000
 
+kafka:
+   zookeeper:
+      connect: ${zookeeper.connect}
+
+springfox:
+   documentation:
+      swagger:
+         v2:
+            path: "/debug/api-doc"
 
 curator.discovery:
    enabled: true

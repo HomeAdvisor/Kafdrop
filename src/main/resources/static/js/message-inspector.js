@@ -25,13 +25,32 @@ jQuery(document).ready(function() {
         e.preventDefault();
 
         linkIcon.toggleClass('fa-chevron-circle-right fa-chevron-circle-down')
-        if (true == body.data('expanded')) {
+        if (true === body.data('expanded')) {
             body.text(JSON.stringify(JSON.parse(body.text())));
             body.data('expanded', false);
         }
         else {
             body.text(JSON.stringify(JSON.parse(body.text()), null, 3));
             body.data('expanded', true);
+        }
+    });
+
+    jQuery(document).on('click', '.toggle-header', function(e) {
+        var link=jQuery(this),
+            linkIcon=link.find('.fa'),
+            headers=link.parent().find('.message-headers'),
+            headersLabel=link.parent().find('.message-headers-label');
+
+        e.preventDefault();
+
+        linkIcon.toggleClass('fa-plus-circle fa-minus-circle')
+        if (true === headers.is(':visible')) {
+            headers.hide();
+            headersLabel.show();
+        }
+        else {
+            headers.show();
+            headersLabel.hide();
         }
     });
 

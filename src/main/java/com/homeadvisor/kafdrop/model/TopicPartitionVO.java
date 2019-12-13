@@ -134,12 +134,18 @@ public class TopicPartitionVO
       private Integer id;
       private boolean inService;
       private boolean leader;
+      private boolean offline;
 
       public PartitionReplica()
       {
       }
 
       public PartitionReplica(Integer id, boolean inService, boolean leader)
+      {
+         this(id, inService, leader, false);
+      }
+      
+      public PartitionReplica(Integer id, boolean inService, boolean leader, boolean offline)
       {
          this.id = id;
          this.inService = inService;
@@ -174,6 +180,16 @@ public class TopicPartitionVO
       public void setLeader(boolean leader)
       {
          this.leader = leader;
+      }
+
+      public boolean isOffline()
+      {
+         return offline;
+      }
+
+      public void setOffline(boolean offline)
+      {
+         this.offline = offline;
       }
    }
 }

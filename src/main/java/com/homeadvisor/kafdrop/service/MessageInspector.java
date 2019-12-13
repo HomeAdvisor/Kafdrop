@@ -18,36 +18,29 @@
 
 package com.homeadvisor.kafdrop.service;
 
+import com.homeadvisor.kafdrop.config.KafkaConfiguration;
 import com.homeadvisor.kafdrop.model.MessageVO;
-import com.homeadvisor.kafdrop.model.TopicPartitionVO;
-import com.homeadvisor.kafdrop.model.TopicVO;
-import com.homeadvisor.kafdrop.util.BrokerChannel;
-import com.homeadvisor.kafdrop.util.ByteUtils;
 import com.homeadvisor.kafdrop.util.MessageDeserializer;
-
-import kafka.api.FetchRequest;
-import kafka.api.FetchRequestBuilder;
-import kafka.javaapi.FetchResponse;
-import kafka.javaapi.consumer.SimpleConsumer;
-import kafka.javaapi.message.ByteBufferMessageSet;
-import kafka.message.Message;
-import kafka.message.MessageAndOffset;
-
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Properties;
 import java.util.stream.StreamSupport;
 
-import io.confluent.kafka.serializers.KafkaAvroDeserializer;
-import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
+import static com.homeadvisor.kafdrop.util.ByteUtils.readString;
 
 
 @Service
@@ -55,8 +48,20 @@ public class MessageInspector
 {
    private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-   @Autowired
-   private KafkaMonitor kafkaMonitor;
+   private KafkaConfiguration config;
+
+   public MessageInspector(KafkaConfiguration config)
+   {
+      this.config = config;
+   }
+
+   private Consumer<byte[], byte[]> createConsumer()
+   {
+      Properties properties = new Properties();
+      config.applyCommon(properties);
+      return new KafkaConsumer(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer());
+
+   }
 
    public List<MessageVO> getMessages(
            String topicName,
@@ -65,65 +70,64 @@ public class MessageInspector
            long count,
            MessageDeserializer deserializer)
    {
-      final TopicVO topic = kafkaMonitor.getTopic(topicName).orElseThrow(TopicNotFoundException::new);
-      final TopicPartitionVO partition = topic.getPartition(partitionId).orElseThrow(PartitionNotFoundException::new);
+      try (Consumer<byte[], byte[]> consumer = createConsumer())
+      {
+         TopicPartition topicPartition = new TopicPartition(topicName, partitionId);
+         consumer.assign(Collections.singletonList(topicPartition));
+         consumer.seek(topicPartition, offset);
 
-      return kafkaMonitor.getBroker(partition.getLeader().getId())
-         .map(broker -> {
-            SimpleConsumer consumer = new SimpleConsumer(broker.getHost(), broker.getPort(), 10000, 100000, "");
+         // Need to adjust how many records we read based on how many are actually available in the partition.
+         long maxOffset = consumer.endOffsets(Collections.singletonList(topicPartition)).get(topicPartition);
 
-            final FetchRequestBuilder fetchRequestBuilder = new FetchRequestBuilder()
-               .clientId("KafDrop")
-               .maxWait(5000) // todo: make configurable
-               .minBytes(1);
+         int numRecordsToRead = (int) Math.min(count, maxOffset - offset);
 
-            List<MessageVO> messages = new ArrayList<>();
-            long currentOffset = offset;
-            while (messages.size() < count)
-            {
-               final FetchRequest fetchRequest =
-                  fetchRequestBuilder
-                     .addFetch(topicName, partitionId, currentOffset, 1024 * 1024)
-                     .build();
+         List<MessageVO> recordList = new ArrayList<>(numRecordsToRead);
+         while (recordList.size() < numRecordsToRead)
+         {
+            ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofMillis(1000L));
+            List<ConsumerRecord<byte[], byte[]>> returnedRecords = records.records(topicPartition);
 
-               FetchResponse fetchResponse = consumer.fetch(fetchRequest);
+            returnedRecords.subList(0, Math.min((int) count - recordList.size(), returnedRecords.size()))
+               .stream()
+               .map(record -> createMessage(record, deserializer))
+               .forEach(recordList::add);
+         }
 
-               final ByteBufferMessageSet messageSet = fetchResponse.messageSet(topicName, partitionId);
-               if (messageSet.validBytes() <= 0) break;
-
-
-               int oldSize = messages.size();
-               StreamSupport.stream(messageSet.spliterator(), false)
-                  .limit(count - messages.size())
-                  .map(MessageAndOffset::message)
-                  .map(m -> createMessage(m, deserializer))
-                  .forEach(messages::add);
-               currentOffset += messages.size() - oldSize;
-            }
-            return messages;
-         })
-         .orElseGet(Collections::emptyList);
+         return recordList;
+      }
    }
-
-   private MessageVO createMessage(Message message, MessageDeserializer deserializer)
+   private MessageVO createMessage(ConsumerRecord<byte[], byte[]> record, MessageDeserializer deserializer)
    {
       MessageVO vo = new MessageVO();
-      if (message.hasKey())
+      vo.setTopic(record.topic());
+      vo.setOffset(record.offset());
+      vo.setPartition(record.partition());
+      if (record.key() != null && record.key().length > 0)
       {
-         vo.setKey(ByteUtils.readString(message.key()));
+         vo.setKey(readString(record.key()));
       }
-      if (!message.isNull())
+      if (record.value() != null && record.value().length > 0)
       {
-         final String messageString = deserializer.deserializeMessage(message.payload());
+         final String messageString;
+         if (deserializer != null)
+         {
+            messageString = deserializer.deserializeMessage(ByteBuffer.wrap(record.value()));
+         }
+         else
+         {
+            messageString = readString(record.value());
+         }
          vo.setMessage(messageString);
       }
 
-      vo.setValid(message.isValid());
-      vo.setCompressionCodec(message.compressionCodec().name());
-      vo.setChecksum(message.checksum());
-      vo.setComputedChecksum(message.computeChecksum());
+      vo.setTimestamp(record.timestamp());
+      vo.setTimestampType(record.timestampType().toString());
+
+      StreamSupport.stream(record.headers().spliterator(), false)
+         .forEachOrdered(header -> vo.addHeader(header.key(), new String(header.value(), StandardCharsets.UTF_8)));
 
       return vo;
    }
+
 
 }

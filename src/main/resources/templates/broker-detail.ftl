@@ -86,4 +86,30 @@
     </table>
 </div>
 
+<#if brokerConfig??>
+<div>
+    <h2>Configuration</h2>
+
+    <table class="table table-bordered">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Value</th>
+            <th>Source</th>
+        </tr>
+        </thead>
+        <tbody>
+        <#list brokerConfig.entries as e>
+              <tr>
+                  <td>${e.name}</td>
+                  <td><#if e.sensitive>xxxxxxxxxx (hidden)<#else>${e.value!''}</#if>
+                  </td>
+                  <td>${e.source}</td>
+              </tr>
+        </#list>
+        </tbody>
+    </table>
+</div>
+</#if>
+
 <@template.footer/>

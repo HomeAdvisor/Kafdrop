@@ -25,6 +25,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -33,18 +34,37 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.Optional;
+
 @Controller
 @RequestMapping("/consumer")
 public class ConsumerController
 {
-   @Autowired
-   private KafkaMonitor kafkaMonitor;
+   private final KafkaMonitor kafkaMonitor;
 
-   @RequestMapping("/{groupId:.+}")
+   public ConsumerController(KafkaMonitor kafkaMonitor)
+   {
+      this.kafkaMonitor = kafkaMonitor;
+   }
+
+   @RequestMapping("{groupId:.+}")
    public String consumerDetail(@PathVariable("groupId") String groupId, Model model)
    {
       model.addAttribute("consumer", kafkaMonitor.getConsumer(groupId)
          .orElseThrow(() -> new ConsumerNotFoundException(groupId)));
+      return "consumer-detail";
+   }
+
+   @RequestMapping("{groupId:.+}/{topic:.+}")
+   public String consumerDetail(@PathVariable("groupId") String groupId,
+                                @PathVariable("topic") String topic,
+                                Model model)
+   {
+
+      ConsumerVO consumer = kafkaMonitor.getTopic(topic)
+         .flatMap(topicDetail -> kafkaMonitor.getConsumerByTopic(groupId, topicDetail))
+         .orElseThrow(() -> new ConsumerNotFoundException(groupId));
+      model.addAttribute("consumer", consumer);
       return "consumer-detail";
    }
 
@@ -53,7 +73,7 @@ public class ConsumerController
          @ApiResponse(code = 200, message = "Success", response = ConsumerVO.class),
          @ApiResponse(code = 404, message = "Invalid consumer group")
    })
-   @RequestMapping(path = "/{groupId:.+}", produces = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.GET)
+   @RequestMapping(path = "{groupId:.+}", produces = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.GET)
    public @ResponseBody ConsumerVO getConsumer(@PathVariable("groupId") String groupId) throws Exception
    {
       final ConsumerVO consumer = kafkaMonitor.getConsumer(groupId)
