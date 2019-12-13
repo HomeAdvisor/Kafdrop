@@ -284,37 +284,7 @@ public class CuratorKafkaMonitor implements KafkaMonitor
 
    @Override
    public ClusterSummaryVO getClusterSummary(Collection<TopicVO> topics) {
-      final ClusterSummaryVO topicSummary = topics.stream()
-              .map(topic -> {
-                 ClusterSummaryVO summary = new ClusterSummaryVO();
-                 summary.setPartitionCount(topic.getPartitions().size());
-                 summary.setUnderReplicatedCount(topic.getUnderReplicatedPartitions().size());
-                 summary.setPreferredReplicaPercent(topic.getPreferredReplicaPercent());
-                 topic.getPartitions()
-                         .forEach(partition -> {
-                            if (partition.getLeader() != null) {
-                               summary.addBrokerLeaderPartition(partition.getLeader().getId());
-                            }
-                            if (partition.getPreferredLeader() != null) {
-                               summary.addBrokerPreferredLeaderPartition(partition.getPreferredLeader().getId());
-                            }
-                            partition.getReplicas()
-                                    .forEach(replica -> summary.addExpectedBrokerId(replica.getId()));
-                         });
-                 return summary;
-              })
-              .reduce((s1, s2) -> {
-                 s1.setPartitionCount(s1.getPartitionCount() + s2.getPartitionCount());
-                 s1.setUnderReplicatedCount(s1.getUnderReplicatedCount() + s2.getUnderReplicatedCount());
-                 s1.setPreferredReplicaPercent(s1.getPreferredReplicaPercent() + s2.getPreferredReplicaPercent());
-                 s2.getBrokerLeaderPartitionCount().forEach(s1::addBrokerLeaderPartition);
-                 s2.getBrokerPreferredLeaderPartitionCount().forEach(s1::addBrokerPreferredLeaderPartition);
-                 return s1;
-              })
-              .orElseGet(ClusterSummaryVO::new);
-      topicSummary.setTopicCount(topics.size());
-      topicSummary.setPreferredReplicaPercent(topicSummary.getPreferredReplicaPercent() / topics.size());
-      return topicSummary;
+      return new ClusterSummaryFactory().getClusterSummary(topics);
    }
 
    @Override

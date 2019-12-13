@@ -44,8 +44,11 @@
                     <td <#if clusterSummary.preferredReplicaPercent lt 1.0>class="warning"</#if>>${clusterSummary.preferredReplicaPercent?string.percent}</td>
                 </tr>
                 <tr>
-                    <td>Total Under Replicated Partitions</td>
-                    <td <#if clusterSummary.underReplicatedCount gt 0>class="warning"</#if>>${clusterSummary.underReplicatedCount}</td>
+                    <td>Total Under Replicated Partitions
+                        <a title="# of partitions (replicas) that are not fully in sync with the leader"
+                           data-toggle="tooltip" data-placement="top" href="#"
+                        ><i class="fa fa-question-circle"></i></a></td>
+                    <td <#if clusterSummary.underReplicatedCount gt 0>class="warning"</#if>>${clusterSummary.underReplicatedCount} (${clusterSummary.laggingReplicaCount} replicas)</td>
                 </tr>
                 </tbody>
             </table>
@@ -69,8 +72,14 @@
                     </th>
                     <th>Controller?</th>
                     <th>
-                        # Partitions (% of Total)
+                        Partition Leadership (% of Total)
                         <a title="# of partitions this broker is the leader for"
+                           data-toggle="tooltip" data-placement="top" href="#"
+                        ><i class="fa fa-question-circle"></i></a>
+                    </th>
+                    <th>
+                        Lagging Replicas
+                        <a title="# of replicas on this broker that have fallen behind the leader"
                            data-toggle="tooltip" data-placement="top" href="#"
                         ><i class="fa fa-question-circle"></i></a>
                     </th>
@@ -96,6 +105,7 @@
                     <td>${b.timestamp?string["yyyy-MM-dd HH:mm:ss.SSSZ"]}</td>
                     <td><@template.yn b.controller/></td>
                     <td>${(clusterSummary.getBrokerLeaderPartitionCount(b.id))!0} (${(((clusterSummary.getBrokerLeaderPartitionCount(b.id))!0)/clusterSummary.partitionCount)?string.percent})</td>
+                    <td>${(clusterSummary.getBrokerUnderReplicationCount(b.id))!0}</td>
                 </tr>
                 </#list>
                 </tbody>

@@ -18,6 +18,8 @@
 
 package com.homeadvisor.kafdrop.model;
 
+import kafka.cluster.Cluster;
+
 import java.util.*;
 
 public class ClusterSummaryVO {
@@ -35,6 +37,8 @@ public class ClusterSummaryVO {
      * Number of partitions each broker should be the leader for
      */
     private Map<Integer, Integer> brokerPreferredLeaderPartitionCount = new HashMap<>();
+
+    private Map<Integer, Integer> brokerUnderReplicationCount = new HashMap<>();
 
     private Set<Integer> expectedBrokerIds = new HashSet<>();
 
@@ -60,6 +64,13 @@ public class ClusterSummaryVO {
 
     public void setUnderReplicatedCount(int underReplicatedCount) {
         this.underReplicatedCount = underReplicatedCount;
+    }
+
+    public int getLaggingReplicaCount()
+    {
+        return getExpectedBrokerIds().stream()
+           .mapToInt(this::getBrokerUnderReplicationCount)
+           .sum();
     }
 
     public double getPreferredReplicaPercent() {
@@ -103,11 +114,44 @@ public class ClusterSummaryVO {
     }
 
     public Collection<Integer> getExpectedBrokerIds() {
-        return brokerPreferredLeaderPartitionCount.keySet();
+        return expectedBrokerIds;
     }
 
     public void addExpectedBrokerId(int brokerId)
     {
         expectedBrokerIds.add(brokerId);
+    }
+
+    public void addBrokerUnderReplicatedPartition(int brokerId)
+    {
+        addBrokerUnderReplicatedPartitions(brokerId, 1);
+    }
+
+    public void addBrokerUnderReplicatedPartitions(int brokerId, int underReplicatedCount)
+    {
+        brokerUnderReplicationCount.merge(brokerId, underReplicatedCount, Integer::sum);
+    }
+
+    public Map<Integer, Integer> getBrokerUnderReplicationCount()
+    {
+        return brokerUnderReplicationCount;
+    }
+
+    public Integer getBrokerUnderReplicationCount(int brokerId)
+    {
+        return brokerUnderReplicationCount.get(brokerId);
+    }
+
+    public ClusterSummaryVO merge(ClusterSummaryVO that)
+    {
+        this.setPartitionCount(this.getPartitionCount() + that.getPartitionCount());
+        this.setUnderReplicatedCount(this.getUnderReplicatedCount() + that.getUnderReplicatedCount());
+        this.setPreferredReplicaPercent(this.getPreferredReplicaPercent() + that.getPreferredReplicaPercent());
+        that.getBrokerLeaderPartitionCount().forEach(this::addBrokerLeaderPartition);
+        that.getBrokerPreferredLeaderPartitionCount().forEach(this::addBrokerPreferredLeaderPartition);
+        that.getBrokerUnderReplicationCount().forEach(this::addBrokerUnderReplicatedPartitions);
+        that.getExpectedBrokerIds().forEach(this::addExpectedBrokerId);
+
+        return this;
     }
 }

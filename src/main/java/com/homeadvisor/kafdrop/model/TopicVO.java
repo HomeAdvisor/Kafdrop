@@ -18,10 +18,9 @@
 
 package com.homeadvisor.kafdrop.model;
 
-import kafka.cluster.Broker;
-
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class TopicVO implements Comparable<TopicVO>
 {
@@ -77,9 +76,25 @@ public class TopicVO implements Comparable<TopicVO>
 
    public Collection<TopicPartitionVO> getUnderReplicatedPartitions()
    {
-      return partitions.values().stream()
-         .filter(TopicPartitionVO::isUnderReplicated)
+      return getUnderReplicatedPartitionStream()
          .collect(Collectors.toList());
+   }
+
+   private Stream<TopicPartitionVO> getUnderReplicatedPartitionStream()
+   {
+      return partitions.values().stream()
+         .filter(TopicPartitionVO::isUnderReplicated);
+   }
+
+   /**
+    * Returns the brokers that have under-replicated partition data
+    * @return Set of broker ids
+    */
+   public Set<Integer> getUnderreplicatedBrokerIds()
+   {
+      return getUnderReplicatedPartitionStream()
+         .flatMap(TopicPartitionVO::getOutOfSyncReplicaStream)
+         .collect(Collectors.toSet());
    }
 
    public void setPartitions(Map<Integer, TopicPartitionVO> partitions)

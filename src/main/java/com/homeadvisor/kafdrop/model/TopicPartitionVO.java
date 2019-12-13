@@ -80,12 +80,12 @@ public class TopicPartitionVO
 
    public List<PartitionReplica> getInSyncReplicas()
    {
-      return inSyncReplicaStream()
+      return getInSyncReplicaStream()
          .sorted(Comparator.comparingInt(PartitionReplica::getId))
          .collect(Collectors.toList());
    }
 
-   private Stream<PartitionReplica> inSyncReplicaStream()
+   public Stream<PartitionReplica> getInSyncReplicaStream()
    {
       return replicas.values().stream()
          .filter(PartitionReplica::isInService);
@@ -93,7 +93,20 @@ public class TopicPartitionVO
 
    public boolean isUnderReplicated()
    {
-      return inSyncReplicaStream().count() < replicas.size();
+      return getInSyncReplicaStream().count() < replicas.size();
+   }
+
+   public Set<Integer> getOutOfSyncReplicas()
+   {
+      return getOutOfSyncReplicaStream()
+         .collect(Collectors.toSet());
+   }
+
+   public Stream<Integer> getOutOfSyncReplicaStream()
+   {
+      return replicas.values().stream()
+         .filter(pr -> !pr.isInService())
+         .map(PartitionReplica::getId);
    }
 
    public long getSize()
