@@ -21,7 +21,17 @@ package com.homeadvisor.kafdrop.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.homeadvisor.kafdrop.model.*;
+import com.homeadvisor.kafdrop.model.BrokerVO;
+import com.homeadvisor.kafdrop.model.ClusterSummaryVO;
+import com.homeadvisor.kafdrop.model.ConsumerOffsetVO;
+import com.homeadvisor.kafdrop.model.ConsumerPartitionVO;
+import com.homeadvisor.kafdrop.model.ConsumerRegistrationVO;
+import com.homeadvisor.kafdrop.model.ConsumerTopicVO;
+import com.homeadvisor.kafdrop.model.ConsumerVO;
+import com.homeadvisor.kafdrop.model.TopicPartitionStateVO;
+import com.homeadvisor.kafdrop.model.TopicPartitionVO;
+import com.homeadvisor.kafdrop.model.TopicRegistrationVO;
+import com.homeadvisor.kafdrop.model.TopicVO;
 import com.homeadvisor.kafdrop.util.BrokerChannel;
 import com.homeadvisor.kafdrop.util.Version;
 import kafka.api.ConsumerMetadataRequest;
@@ -29,15 +39,29 @@ import kafka.api.PartitionOffsetRequestInfo;
 import kafka.cluster.Broker;
 import kafka.common.ErrorMapping;
 import kafka.common.TopicAndPartition;
-import kafka.javaapi.*;
+import kafka.javaapi.ConsumerMetadataResponse;
+import kafka.javaapi.OffsetFetchRequest;
+import kafka.javaapi.OffsetFetchResponse;
+import kafka.javaapi.OffsetRequest;
+import kafka.javaapi.OffsetResponse;
+import kafka.javaapi.PartitionMetadata;
+import kafka.javaapi.TopicMetadata;
+import kafka.javaapi.TopicMetadataRequest;
+import kafka.javaapi.TopicMetadataResponse;
 import kafka.network.BlockingChannel;
 import kafka.utils.ZKGroupDirs;
 import kafka.utils.ZKGroupTopicDirs;
 import kafka.utils.ZkUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.*;
+import org.apache.curator.framework.recipes.cache.ChildData;
+import org.apache.curator.framework.recipes.cache.NodeCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.framework.recipes.cache.TreeCache;
+import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,12 +73,21 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -883,7 +916,6 @@ public class CuratorKafkaMonitor implements KafkaMonitor
          return Integer.parseInt(StringUtils.substringAfter(input.getPath(), ZkUtils.BrokerIdsPath() + "/"));
       }
 
-
       private BrokerVO parseBroker(ChildData input)
       {
          try
@@ -898,5 +930,4 @@ public class CuratorKafkaMonitor implements KafkaMonitor
          }
       }
    }
-
 }
