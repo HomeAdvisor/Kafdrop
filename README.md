@@ -5,7 +5,7 @@ Kafdrop is a UI for monitoring Apache Kafka clusters. The tool displays informat
 ## Requirements
 
 * Java 8
-* Kafka (0.8.1 or 0.8.2 is known to work)
+* Kafka 2.0 or later (might work with earlier versions)
 * Zookeeper (3.4.5 or later)
 
 Optional, additional integration:
