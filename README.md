@@ -25,7 +25,7 @@ $ mvn clean package
 The build process creates an executable JAR file.  
 
 ```
-java -jar ./target/kafdrop-<version>.jar --zookeeper.connect=<host>:<port>,<host>:<port>,...
+java -jar ./target/kafdrop-<version>.jar --zookeeper.connect=<host:port>,<host:port>,... --kafka.brokers=<host:port>,<host:port>,...
 ```
 
 Then open a browser and navigate to http://localhost:9000. The port can be overridden by adding the following config:
