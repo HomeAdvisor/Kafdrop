@@ -68,6 +68,22 @@ Once the build finishes you can launch the image as follows:
 
 And access the UI at http://localhost:9000.
 
+## Configuration Options
+
+| Option                                | Default | Description                                                            | 
+| ------------------------------------- | ------- | ---------------------------------------------------------------------- |
+| kafka.truststoreLocation              |         | Location of the truststore used for secure connections                 |
+| kafka.keystoreLocation                |         | Location of the keystore used for secure connections                   |
+| kafka.additionalProperties.<property> |         | Additional properties to pass to the Admin or Consumer clients         |
+| kafka.adminPool.minIdle               | 0       | Minimum number of unused admin clients to keep open                    |
+| kafka.adminPool.maxIdle               | 8       | Maximum number of unused admin clients to keep open                    |
+| kafka.adminPool.maxTotal              | 8       | Maximum number of admin clients to have open at one time               |
+| kafka.adminPool.maxWaitMillis         | -1      | Milliseconds to wait for an admin client from the pool (-1 == forever) |
+| kafka.consumerPool.minIdle            | 0       | Minimum number of unused consumer clients to keep open                 |
+| kafka.consumerPool.maxIdle            | 8       | Maximum number of unused consumer clients to keep open                 |
+| kafka.consumerPool.maxTotal           | 8       | Maximum number of consumer clients to have open at one time            |
+| kafka.consumerPool.maxWaitMillis      | -1      | Millis to wait for a consumer client from the pool (-1 == forever)     |
+
 ## Kafka APIs
 
 Starting with version 2.0.0, Kafdrop offers a set of Kafka APIs that mirror the existing HTML views. Any existing endpoint can be returned as JSON by simply setting the *Accept : application/json header*. There are also two endpoints that are JSON only:
