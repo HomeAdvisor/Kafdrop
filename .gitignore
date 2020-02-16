@@ -8,3 +8,5 @@ target
 *.iws
 *.ipr
 .idea/
+.gradle/
+build/
